@@ -29,6 +29,7 @@
 
 #import "OBShapedButton.h"
 #import "UIImage+ColorAtPixel.h"
+#import "UIImage+Alpha.h"
 
 @interface OBShapedButton ()
 
@@ -63,6 +64,7 @@
 {
     [self updateImageCacheForCurrentState];
     [self resetHitTestCache];
+    self.useCacheImageTransparency = true;
 }
 
 #pragma mark - Hit testing
@@ -75,24 +77,37 @@
     CGSize bSize = self.bounds.size;
     point.x *= (bSize.width != 0) ? (iSize.width / bSize.width) : 1;
     point.y *= (bSize.height != 0) ? (iSize.height / bSize.height) : 1;
-
-    UIColor *pixelColor = [image colorAtPixel:point];
-    CGFloat alpha = 0.0;
+   
+   if (self.useCacheImageTransparency)
+   {
+      BOOL isTransparent = [image isPointTransparent:point];
+      if (!isTransparent)
+      {
+         isTransparent = [image isPointTransparent:point];
+      }
+      return !isTransparent;
+   }
+   else
+   {
+      UIColor *pixelColor = [image colorAtPixel:point];
+      CGFloat alpha = 0.0;
+      
+      if ([pixelColor respondsToSelector:@selector(getRed:green:blue:alpha:)])
+      {
+         // available from iOS 5.0
+         [pixelColor getRed:NULL green:NULL blue:NULL alpha:&alpha];
+      }
+      else
+      {
+         // for iOS < 5.0
+         // In iOS 6.1 this code is not working in release mode, it works only in debug
+         // CGColorGetAlpha always return 0.
+         CGColorRef cgPixelColor = [pixelColor CGColor];
+         alpha = CGColorGetAlpha(cgPixelColor);
+      }
+      return alpha >= kAlphaVisibleThreshold;
+   }
     
-    if ([pixelColor respondsToSelector:@selector(getRed:green:blue:alpha:)])
-    {
-        // available from iOS 5.0
-        [pixelColor getRed:NULL green:NULL blue:NULL alpha:&alpha];
-    }
-    else
-    {
-        // for iOS < 5.0
-        // In iOS 6.1 this code is not working in release mode, it works only in debug
-        // CGColorGetAlpha always return 0.
-        CGColorRef cgPixelColor = [pixelColor CGColor];
-        alpha = CGColorGetAlpha(cgPixelColor);
-    }
-    return alpha >= kAlphaVisibleThreshold;
 }
 
 

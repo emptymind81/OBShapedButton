@@ -43,4 +43,6 @@
 
 // Class interface is empty. OBShapedButton does not add new public methods.
 
+@property bool useCacheImageTransparency;
+
 @end
